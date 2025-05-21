@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 
 import os
-for dirname, _, filenames in os.walk('/content/drive/MyDrive/archive'):
+for dirname, _, filenames in os.walk('/content/drive/MyDrive/archive (1)'):
     for filename in filenames:
         print(os.path.join(dirname, filename))
 
@@ -25,9 +25,9 @@ import tensorflow as tf
 X_train = []
 Y_train = []
 image_size = 150
-labels = ['glioma_tumor', 'meningioma_tumor', 'no_tumor', 'pituitary_tumor']
+labels = ['glioma', 'meningioma', 'notumor', 'pituitary']
 for i in labels:
-    folderPath = os.path.join('/content/drive/MyDrive/archive/Training', i)
+    folderPath = os.path.join('/content/drive/MyDrive/archive (1)/Training', i)
     for j in os.listdir(folderPath):
         img = cv2.imread(os.path.join(folderPath, j))
         img = cv2.resize(img, (image_size, image_size))
@@ -35,7 +35,7 @@ for i in labels:
         Y_train.append(i)
 
 for i in labels:
-    folderPath = os.path.join('/content/drive/MyDrive/archive/Testing', i)
+    folderPath = os.path.join('/content/drive/MyDrive/archive (1)/Testing', i)
     for j in os.listdir(folderPath):
         img = cv2.imread(os.path.join(folderPath, j))
         img = cv2.resize(img, (image_size, image_size))
@@ -61,107 +61,117 @@ for i in y_test:
 y_test=y_test_new
 y_test = tf.keras.utils.to_categorical(y_test)
 
-#Model
-model = Sequential()
-model.add(Conv2D(32,(3,3),activation = 'relu',input_shape=(150,150,3)))
-model.add(Conv2D(64,(3,3),activation='relu'))
-model.add(MaxPooling2D(2,2))
-model.add(Dropout(0.3))
-model.add(Conv2D(64,(3,3),activation='relu'))
-model.add(Conv2D(64,(3,3),activation='relu'))
-model.add(Dropout(0.3))
-model.add(MaxPooling2D(2,2))
-model.add(Dropout(0.3))
-model.add(Conv2D(128,(3,3),activation='relu'))
-model.add(Conv2D(128,(3,3),activation='relu'))
-model.add(Conv2D(128,(3,3),activation='relu'))
-model.add(MaxPooling2D(2,2))
-model.add(Dropout(0.3))
-model.add(Conv2D(128,(3,3),activation='relu'))
-model.add(Conv2D(256,(3,3),activation='relu'))
-model.add(MaxPooling2D(2,2))
-model.add(Dropout(0.3))
-model.add(Flatten())
-model.add(Dense(512,activation = 'relu'))
-model.add(Dense(512,activation = 'relu'))
-model.add(Dropout(0.3))
-model.add(Dense(4,activation='softmax'))
+from tensorflow.keras.models import Sequential, load_model
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Dropout, Flatten, Dense
+import os
+
+# Path to save and load the model
+MODEL_PATH = 'saved_model/my_cnn_model.h5'
+
+# Check if model already exists
+if os.path.exists(MODEL_PATH):
+    print("Loading pre-trained model...")
+    model = load_model(MODEL_PATH)
+else:
+    print("Training new model...")
+    # Define model
+    model = Sequential()
+    model.add(Conv2D(32, (3, 3), activation='relu', input_shape=(150, 150, 3)))
+    model.add(Conv2D(64, (3, 3), activation='relu'))
+    model.add(MaxPooling2D(2, 2))
+    model.add(Dropout(0.3))
+    model.add(Conv2D(64, (3, 3), activation='relu'))
+    model.add(Conv2D(64, (3, 3), activation='relu'))
+    model.add(Dropout(0.3))
+    model.add(MaxPooling2D(2, 2))
+    model.add(Dropout(0.3))
+    model.add(Conv2D(128, (3, 3), activation='relu'))
+    model.add(Conv2D(128, (3, 3), activation='relu'))
+    model.add(Conv2D(128, (3, 3), activation='relu'))
+    model.add(MaxPooling2D(2, 2))
+    model.add(Dropout(0.3))
+    model.add(Conv2D(128, (3, 3), activation='relu'))
+    model.add(Conv2D(256, (3, 3), activation='relu'))
+    model.add(MaxPooling2D(2, 2))
+    model.add(Dropout(0.3))
+    model.add(Flatten())
+    model.add(Dense(512, activation='relu'))
+    model.add(Dense(512, activation='relu'))
+    model.add(Dropout(0.3))
+    model.add(Dense(4, activation='softmax'))
+
+    model.compile(loss='categorical_crossentropy', optimizer='Adam', metrics=['accuracy'])
+
+    # Train and save model
+    history = model.fit(X_train, y_train, epochs=20, validation_split=0.1)
+    model.save(MODEL_PATH)
+    print("Model saved to:", MODEL_PATH)
+
+# Show model summary
 model.summary()
 
-model.compile(loss='categorical_crossentropy',optimizer='Adam',metrics=['accuracy'])
-history = model.fit(X_train,y_train,epochs=20,validation_split=0.1)
+# Save entire model
+model.save('braintumor_model.h5')
 
+# Save only weights
+model.save_weights('braintumor_weights.weights.h5')
+
+from tensorflow import keras
+import numpy as np
+import cv2
 import matplotlib.pyplot as plt
 import seaborn as sns
-
-acc = history.history['accuracy']
-val_acc = history.history['val_accuracy']
-epochs = range(len(acc))
-
-fig = plt.figure(figsize=(5,5))
-plt.plot(epochs,acc,'r',label="Training Accuracy")
-plt.plot(epochs,val_acc,'b',label="Validation Accuracy")
-plt.legend(loc='upper left')
-plt.show()
-
-loss = history.history['loss']
-val_loss = history.history['val_loss']
-epochs = range(len(loss))
-fig = plt.figure(figsize=(5,5))
-plt.plot(epochs,loss,'r',label="Training loss")
-plt.plot(epochs,val_loss,'b',label="Validation loss")
-plt.legend(loc='upper left')
-plt.show()
-
-img = cv2.imread('/content/drive/MyDrive/archive/Testing/no_tumor/image(100).jpg')
-img = cv2.resize(img,(150,150))
-img_array = np.array(img)
-img_array=img_array.reshape(1,150,150,3)
-plt.imshow(img,interpolation='nearest')
-
-model.save('braintumor.h5')
-
-saved_model=keras.models.load_model("braintumor.h5")
-
-a=model.predict(img_array)
-indices = a.argmax()
-indices
-if indices==0:
-  print("Glioma_tumor")
-elif indices==1:
-  print("Meningioma_tumor")
-elif indices==2:
-  print("No Tumor")
-elif indices==3:
-  print("Pituitary_tumor")
-
 from sklearn.metrics import confusion_matrix, classification_report
 
-y_pred = saved_model.predict(X_test)
+# Load full model
+model = keras.models.load_model('braintumor_model.h5')
+# ----------------------------
+# Predict on a single image
+# ----------------------------
+img_path = '/content/drive/MyDrive/archive (1)/Testing/glioma/Te-glTr_0000.jpg'
+img = cv2.imread(img_path)
+img = cv2.resize(img, (150, 150))
+img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+img_array = np.expand_dims(img_rgb, axis=0)
+
+prediction = model.predict(img_array)
+predicted_class = np.argmax(prediction)
+
+labels = ['glioma', 'meningioma', 'notumor', 'pituitary']
+plt.imshow(img_rgb)
+plt.title(f"Predicted: {labels[predicted_class]}")
+plt.axis('off')
+plt.show()
+
+print("Predicted class:", labels[predicted_class])
+
+# ----------------------------
+# Evaluate on test set
+# ----------------------------
+y_pred = model.predict(X_test)
 y_pred_classes = np.argmax(y_pred, axis=1)
 y_true_classes = np.argmax(y_test, axis=1)
 
 cm = confusion_matrix(y_true_classes, y_pred_classes)
-plt.figure(figsize=(5, 4))
+plt.figure(figsize=(6, 5))
 sns.heatmap(cm, annot=True, cmap="Blues", fmt="d", xticklabels=labels, yticklabels=labels)
 plt.xlabel('Predicted')
 plt.ylabel('True')
 plt.title('Confusion Matrix')
 plt.show()
 
-report = classification_report(y_true_classes, y_pred_classes, target_names=labels)
-print("Classification Report:\n", report)
+print("Classification Report:\n", classification_report(y_true_classes, y_pred_classes, target_names=labels))
 
-# Specificity, Sensitivity, and Accuracy
-TN = cm[0][0]
-FP = cm[0][1] + cm[0][2] + cm[0][3]
-FN = cm[1][0] + cm[2][0] + cm[3][0]
-TP = cm[1][1] + cm[1][2] + cm[1][3] + cm[2][1] + cm[2][2] + cm[2][3] + cm[3][1] + cm[3][2] + cm[3][3]
+# Sensitivity, Specificity, Accuracy
+TP = np.diag(cm)
+FP = np.sum(cm, axis=0) - TP
+FN = np.sum(cm, axis=1) - TP
+TN = np.sum(cm) - (FP + FN + TP)
 
-specificity = TN / (TN + FP)
-sensitivity = TP / (TP + FN)
-accuracy = (TP + TN) / (TP + TN + FP + FN)
+specificity = np.mean(np.divide(TN, TN + FP, out=np.zeros_like(TN, dtype=float), where=(TN + FP)!=0))
+sensitivity = np.mean(np.divide(TP, TP + FN, out=np.zeros_like(TP, dtype=float), where=(TP + FN)!=0))
+accuracy = np.sum(TP) / np.sum(cm)
 
-print("Specificity:", specificity)
-print("Sensitivity:", sensitivity)
-print("Accuracy:", accuracy)
+print("Macro-Averaged Specificity:", round(specificity, 4))
+print("Macro-Averaged Sensitivity (Recall):", round(sensitivity, 4))
+print("Accuracy:", round(accuracy, 4))
